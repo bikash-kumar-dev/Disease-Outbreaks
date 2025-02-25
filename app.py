@@ -1,6 +1,8 @@
 import os
 import pickle
 import pandas as pd
+import numpy as np
+from sklearn.preprocessing import StandardScaler
 import streamlit as st
 from streamlit_option_menu import option_menu
 # set page configuration
@@ -10,9 +12,27 @@ st.set_page_config(page_title="Prediction od Disease Outbreaks",
 # getting the working directory of the main,py
 working_dir = os.path.dirname(os.path.abspath(__file__))
 # loading the saved models
-diabetes_model = pickle.load(open(f'{working_dir}/Training_models/diabetes_model.sav', 'rb'))
+'''diabetes_model = pickle.load(open(f'{working_dir}/Training_models/diabetes_model.sav', 'rb'))
 heart_disease_model = pickle.load(open(f'{working_dir}/Training_models/heart_model.sav', 'rb'))
+parkinsons_model= pickle.load(open(f'{working_dir}/Training_models/parkinsons_model.sav', 'rb'))'''
+
+
+# Load the saved models for Diabetes XGBoost model using Pickle
+with open('Training_models/xgboost_diabetes_model.pkl', 'rb') as file:
+    model = pickle.load(file)
+
+# Load the scaler used during training
+with open('Training_models/X_train_scaler.pkl', 'rb') as file:
+    scaler = pickle.load(file)
+
+# Load the trained model for Heart disease
+model_filename = "Training_models/heart_disease_model.pkl"
+with open(model_filename, "rb") as model_file:
+    modelh = pickle.load(model_file)
+
+# Load the saved models for Parkinsons
 parkinsons_model= pickle.load(open(f'{working_dir}/Training_models/parkinsons_model.sav', 'rb'))
+
 # sidebar for nevigation
 with st.sidebar:
     selected = option_menu('Prediction of Disease Outbreaks System',
@@ -26,7 +46,7 @@ with st.sidebar:
 # Diabetes Prediction Page
 if selected == 'Diabetes Prediction':
 
-    # page title
+    '''# page title
     st.title('Diabetes Prediction using ML')
 
     # getting the input data from the user
@@ -77,12 +97,56 @@ if selected == 'Diabetes Prediction':
         else:
             diab_diagnosis =  'The person is diabetic'
 
-    st.success(diab_diagnosis)
+    st.success(diab_diagnosis)'''
+
+
+    st.title("Diabetes Prediction App")
+    st.markdown("""
+    This app predicts the likelihood of diabetes based on user input data.
+    Fill in the values below and click 'Predict' to see the result.
+    """)
+
+    # Input fields for user data
+    Pregnancies = st.number_input('Pregnancies', min_value=0, max_value=20, value=1)
+    Glucose = st.number_input('Glucose', min_value=0, max_value=200, value=120)
+    BloodPressure = st.number_input('Blood Pressure', min_value=0, max_value=150, value=70)
+    SkinThickness = st.number_input('Skin Thickness', min_value=0, max_value=100, value=20)
+    Insulin = st.number_input('Insulin', min_value=0, max_value=800, value=85)
+    BMI = st.number_input('BMI', min_value=0.0, max_value=70.0, value=25.0)
+    DiabetesPedigreeFunction = st.number_input('Diabetes Pedigree Function', min_value=0.0, max_value=3.0, value=0.5)
+    Age = st.number_input('Age', min_value=0, max_value=120, value=30)
+
+    # Collect user inputs into a DataFrame with feature names
+    feature_names = ['Pregnancies', 'Glucose', 'BloodPressure', 'SkinThickness', 
+                    'Insulin', 'BMI', 'DiabetesPedigreeFunction', 'Age']
+
+    user_data = pd.DataFrame([[Pregnancies, Glucose, BloodPressure, SkinThickness, 
+                            Insulin, BMI, DiabetesPedigreeFunction, Age]], 
+                            columns=feature_names)
+
+    # Standardize user inputs
+    user_data_scaled = scaler.transform(user_data)
+
+
+    # Make prediction when the button is clicked
+    if st.button('Predict'):
+        prediction = model.predict(user_data_scaled)
+        probability = model.predict_proba(user_data_scaled)[0][1]
+        
+        if prediction[0] == 1:
+            st.error(f'High risk of diabetes. Probability: {probability:.2f}')
+        else:
+            st.success(f'Low risk of diabetes. Probability: {probability:.2f}')
+
+
+
+
+
 
 # Herat Disease Prediction Page
 if selected == 'Heart Disease Prediction':
 
-    # page title
+    '''# page title
     st.title('Heart Disease Prediction using ML')
 
     col1, col2, col3 = st.columns(3)
@@ -140,7 +204,38 @@ if selected == 'Heart Disease Prediction':
         else:
             heart_diagnosis = 'The Person does not have any Heart Disease'
         
-    st.success(heart_diagnosis)
+    st.success(heart_diagnosis)'''
+    st.title("Heart Disease Prediction App")
+    st.write("Enter the details below to predict the risk of heart disease.")
+
+    # Create input fields
+    age = st.number_input("Age", min_value=20, max_value=100, value=50)
+    sex = st.selectbox("Sex", ["Male", "Female"])
+    cp = st.selectbox("Chest Pain Type (CP)", [0, 1, 2, 3])
+    trestbps = st.number_input("Resting Blood Pressure (trestbps)", min_value=80, max_value=200, value=120)
+    chol = st.number_input("Cholesterol (chol)", min_value=100, max_value=600, value=200)
+    restecg = st.selectbox("Resting ECG (restecg)", [0, 1, 2])
+    thalach = st.number_input("Max Heart Rate Achieved (thalach)", min_value=60, max_value=250, value=150)
+    exang = st.selectbox("Exercise-Induced Angina (exang)", [0, 1])
+    oldpeak = st.number_input("ST Depression Induced (oldpeak)", min_value=0.0, max_value=6.2, value=1.0, step=0.1)
+    slope = st.selectbox("Slope of the Peak Exercise ST Segment", [0, 1, 2])
+    ca = st.selectbox("Number of Major Vessels (ca)", [0, 1, 2, 3, 4])
+    thal = st.selectbox("Thalassemia (thal)", [0, 1, 2, 3])
+
+    # Convert categorical inputs
+    sex = 1 if sex == "Male" else 0
+
+    # Create input data for prediction
+    input_data = pd.DataFrame([[age, sex, cp, trestbps, chol, restecg, thalach, exang, oldpeak, slope, ca, thal]],
+                            columns=["age", "sex", "cp", "trestbps", "chol", "restecg", "thalach", "exang", "oldpeak", "slope", "ca", "thal"])
+
+    # Make prediction
+    if st.button("Predict"):
+        prediction = modelh.predict(input_data)
+        result = "Heart Disease Detected" if prediction[0] == 0 else "No Heart Disease"
+        
+        st.subheader("Prediction Result:")
+        st.write(f"🩺 **{result}**")
 
 # Parkinsons Prediction Page
 if selected == 'Parkinsons Prediction':
